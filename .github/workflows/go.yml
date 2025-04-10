@@ -13,48 +13,47 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.24.0'
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.0'
 
-    - name: Verify Modules
-      run: go mod verify
+      - name: Verify Modules
+        run: go mod verify
 
-    - name: Run Vulnerability Check
-      run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+      - name: Run Vulnerability Check
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
-    - name: Run Static Analysis
-      run: go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-ST1000,-U1000 ./...
+      - name: Run Static Analysis
+        run: go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-ST1000,-U1000 ./...
 
-    - name: Install Golangci-lint
-      run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.64.8
+      - name: Install Golangci-lint
+        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.64.8
 
-    - name: Run Golangci-lint
-      run: $(go env GOPATH)/bin/golangci-lint run ./...
+      - name: Run Golangci-lint
+        run: $(go env GOPATH)/bin/golangci-lint run ./...
 
-    - name: Create bin directory
-      run: mkdir -p ./bin
+      - name: Create bin directory
+        run: mkdir -p ./bin
 
-    - name: Build for Linux
-      run: |
-        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o ./bin/api ./cmd/server
+      - name: Build for Linux
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o ./bin/api ./cmd/server
 
-    - name: Build for Darwin AMD64
-      run: |
-        CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o ./bin/api_darwin_amd64 ./cmd/server
+      - name: Build for Darwin AMD64
+        run: |
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o ./bin/api_darwin_amd64 ./cmd/server
 
-    - name: Build for Darwin ARM64
-      run: |
-        CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o ./bin/api_darwin_arm64 ./cmd/server
+      - name: Build for Darwin ARM64
+        run: |
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o ./bin/api_darwin_arm64 ./cmd/server
 
-    - name: Build for Windows
-      run: |
-        CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o ./bin/api.exe ./cmd/server
+      - name: Build for Windows
+        run: |
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o ./bin/api.exe ./cmd/server
 
     ## Uncomment the following lines to run unit tests once the tests are written
     # - name: Run Unit Tests
     #   run: go test -v ./test/unittests/...
-
