@@ -14,9 +14,8 @@ type CreateUserRequest struct {
 }
 
 type CreateUserResponse struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Name     string `json:"name" `
+	Email string `json:"email"`
+	Name  string `json:"name" `
 }
 
 type LoginRequest struct {

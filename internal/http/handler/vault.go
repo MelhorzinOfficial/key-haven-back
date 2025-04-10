@@ -48,10 +48,8 @@ func (h *VaultHandler) Create(c fiber.Ctx) error {
 		return err
 	}
 
-	// Set the user ID from authenticated context
 	req.UserID = userID
 
-	// Create the vault
 	vault, err := h.vaultService.CreateVault(c.Context(), &req)
 	if err != nil {
 		if errors.Is(err, service.ErrVaultNameExists) {

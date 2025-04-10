@@ -80,8 +80,8 @@ start: check-go-version
 
 check-go-version:
 	@echo "Checking Go version..."
-#	@go version | grep -q "go1.2[4-9]" || (echo "Error: This project requires Go 1.24 or later. Current version:" && go version && echo "To update Go, visit: https://golang.org/dl/" && exit 1)
-#	@echo "Go version is compatible with this project"
+	@go version | grep -q "go1.2[4-9]" || (echo "Error: This project requires Go 1.24 or later. Current version:" && go version && echo "To update Go, visit: https://golang.org/dl/" && exit 1)
+	@echo "Go version is compatible with this project"
 
 code-quality: check-go-version
 	go mod verify
