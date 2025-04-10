@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+# https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#permissions
+permissions: write-all
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        arch: [ linux/amd64 ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.0'
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}
+          labels: |
+            org.opencontainers.image.title=https://github.com/${{ github.repository }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          tags: |
+            type=schedule
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          cache-binary: false
+
+      - name: Login to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image And Push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: ${{ matrix.arch }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            COMMIT=${{ github.sha }}
+            VERSION=${{ steps.meta.outputs.tags.semver }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
