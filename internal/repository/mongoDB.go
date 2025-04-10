@@ -27,7 +27,6 @@ func NewMongoRepository[T any](collection *mongo.Collection) *MongoRepository[T]
 	}
 }
 
-// CreateIndex creates an index on the specified field
 func (r *MongoRepository[T]) CreateIndex(field string, unique bool) error {
 	indexModel := mongo.IndexModel{
 		Keys:    bson.D{{Key: field, Value: 1}},

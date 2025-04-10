@@ -25,14 +25,12 @@ type CredentialService interface {
 	DeleteCredential(ctx context.Context, id string) error
 }
 
-// credentialService implements the CredentialService interface
 type credentialService struct {
 	credentialRepo repository.CredentialRepository
 	vaultService   VaultService
 	vaultRepo      repository.VaultRepository
 }
 
-// NewCredentialService creates a new credential service
 func NewCredentialService(credentialRepo repository.CredentialRepository, vaultService VaultService, vaultRepo repository.VaultRepository) CredentialService {
 	return &credentialService{
 		credentialRepo: credentialRepo,
@@ -143,7 +141,6 @@ func (s *credentialService) GetCredentialByID(ctx context.Context, id string, ma
 	}, nil
 }
 
-// GetAllCredentialsByVaultID retrieves all credentials in a vault
 func (s *credentialService) GetAllCredentialsByVaultID(ctx context.Context, vaultID string) ([]*dto.CredentialListItem, error) {
 	// Check if the vault exists
 	vault, err := s.vaultRepo.FindByID(ctx, vaultID)
@@ -169,7 +166,6 @@ func (s *credentialService) GetAllCredentialsByVaultID(ctx context.Context, vaul
 	return items, nil
 }
 
-// UpdateCredential updates a credential's details and optionally its password
 func (s *credentialService) UpdateCredential(ctx context.Context, request *dto.UpdateCredentialRequest) (*dto.CredentialListItem, error) {
 	// Check if credential exists
 	credential, err := s.credentialRepo.FindByID(ctx, request.ID)

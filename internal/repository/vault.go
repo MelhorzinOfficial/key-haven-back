@@ -83,7 +83,6 @@ func (r *MongoVaultRepository) FindByID(ctx context.Context, id string) (*user.V
 	return vault, nil
 }
 
-// FindByName retrieves a vault by user ID and vault name
 func (r *MongoVaultRepository) FindByName(ctx context.Context, userID, name string) (*user.Vault, error) {
 	filter := bson.M{"user_id": userID, "name": name}
 	vault, err := r.repo.FindOne(ctx, filter)
@@ -96,12 +95,10 @@ func (r *MongoVaultRepository) FindByName(ctx context.Context, userID, name stri
 	return vault, nil
 }
 
-// FindDefaultByUserID retrieves the default vault for a user
 func (r *MongoVaultRepository) FindDefaultByUserID(ctx context.Context, userID string) (*user.Vault, error) {
 	return r.FindByName(ctx, userID, "Default")
 }
 
-// FindAllByUserID retrieves all vaults belonging to a user
 func (r *MongoVaultRepository) FindAllByUserID(ctx context.Context, userID string) ([]*user.Vault, error) {
 	filter := bson.M{"user_id": userID}
 	vaults, err := r.repo.Find(ctx, filter)
@@ -117,7 +114,6 @@ func (r *MongoVaultRepository) FindAllByUserID(ctx context.Context, userID strin
 	return result, nil
 }
 
-// Update updates a vault's details
 func (r *MongoVaultRepository) Update(ctx context.Context, vault *user.Vault) error {
 	// Check if the updated name conflicts with an existing vault
 	if existingVault, err := r.FindByName(ctx, vault.UserID, vault.Name); err == nil && existingVault != nil && existingVault.ID != vault.ID {
@@ -135,9 +131,6 @@ func (r *MongoVaultRepository) Update(ctx context.Context, vault *user.Vault) er
 	return r.repo.Update(ctx, vault.ID, "_id", update)
 }
 
-// Delete removes a vault from the database
 func (r *MongoVaultRepository) Delete(ctx context.Context, id string) error {
-	// NOTE: In a real application, you might want to check if the vault has any credentials
-	// and either prevent deletion or implement a cascading delete
 	return r.repo.Delete(ctx, id, "_id")
 }

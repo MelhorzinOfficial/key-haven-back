@@ -17,7 +17,6 @@ var (
 	ErrCredentialNameExists = errors.New("credential with this name already exists in this vault")
 )
 
-// CredentialRepository defines the interface for credential-related database operations
 type CredentialRepository interface {
 	Create(ctx context.Context, credential *user.Credential) error
 	FindByID(ctx context.Context, id string) (*user.Credential, error)
@@ -32,7 +31,6 @@ type MongoCredentialRepository struct {
 	repo *MongoRepository[user.Credential]
 }
 
-// NewCredentialRepository creates a new credential repository with MongoDB implementation
 func NewCredentialRepository(database *mongo.Database) CredentialRepository {
 	collection := database.Collection("credentials")
 	repo := NewMongoRepository[user.Credential](collection)
@@ -74,7 +72,7 @@ func (r *MongoCredentialRepository) Create(ctx context.Context, credential *user
 func (r *MongoCredentialRepository) FindByID(ctx context.Context, id string) (*user.Credential, error) {
 	credential, err := r.repo.FindByID(ctx, id, "_id")
 	if err != nil {
-		if err == ErrDocumentNotFound {
+		if errors.Is(err, ErrDocumentNotFound) {
 			return nil, ErrCredentialNotFound
 		}
 		return nil, err
@@ -87,7 +85,7 @@ func (r *MongoCredentialRepository) FindByName(ctx context.Context, vaultID, nam
 	filter := bson.M{"vault_id": vaultID, "name": name}
 	credential, err := r.repo.FindOne(ctx, filter)
 	if err != nil {
-		if err == ErrDocumentNotFound {
+		if errors.Is(err, ErrDocumentNotFound) {
 			return nil, ErrCredentialNotFound
 		}
 		return nil, err
@@ -111,7 +109,6 @@ func (r *MongoCredentialRepository) FindAllByVaultID(ctx context.Context, vaultI
 	return result, nil
 }
 
-// Update updates a credential's details
 func (r *MongoCredentialRepository) Update(ctx context.Context, credential *user.Credential) error {
 	// Check if the updated name conflicts with an existing credential in the same vault
 	existingCred, err := r.FindByName(ctx, credential.VaultID, credential.Name)
@@ -134,7 +131,6 @@ func (r *MongoCredentialRepository) Update(ctx context.Context, credential *user
 	return r.repo.Update(ctx, credential.ID, "_id", update)
 }
 
-// Delete removes a credential from the database
 func (r *MongoCredentialRepository) Delete(ctx context.Context, id string) error {
 	return r.repo.Delete(ctx, id, "_id")
 }

@@ -9,13 +9,11 @@ import (
 	"github.com/gofiber/fiber/v3"
 )
 
-// CredentialHandler handles credential-related HTTP requests
 type CredentialHandler struct {
 	credentialService service.CredentialService
 	vaultService      service.VaultService
 }
 
-// NewCredentialHandler creates a new credential handler
 func NewCredentialHandler(credentialService service.CredentialService, vaultService service.VaultService) *CredentialHandler {
 	return &CredentialHandler{
 		credentialService: credentialService,
@@ -40,19 +38,16 @@ func NewCredentialHandler(credentialService service.CredentialService, vaultServ
 func (h *CredentialHandler) Create(c fiber.Ctx) error {
 	res := response.HTTPResponse{Ctx: c}
 
-	// Get the user ID from the authenticated context
 	userID := c.Locals("user_id").(string)
 	if userID == "" {
 		return res.Message(fiber.StatusUnauthorized, "Unauthorized")
 	}
 
-	// Parse the request body
 	var req dto.CreateCredentialRequest
 	if err := c.Bind().Body(&req); err != nil {
 		return err
 	}
 
-	// Set the user ID from authenticated context
 	req.UserID = userID
 
 	credential, err := h.credentialService.CreateCredential(c.Context(), &req)
@@ -93,7 +88,6 @@ func (h *CredentialHandler) GetByID(c fiber.Ctx) error {
 		return res.Message(fiber.StatusBadRequest, "Master password is required")
 	}
 
-	// Get the credential with decrypted password
 	credential, err := h.credentialService.GetCredentialByID(c.Context(), id, masterPassword)
 	if err != nil {
 		if errors.Is(err, service.ErrCredentialNotFound) {
@@ -125,7 +119,6 @@ func (h *CredentialHandler) GetAllByVault(c fiber.Ctx) error {
 	res := response.HTTPResponse{Ctx: c}
 	vaultID := c.Params("vault_id")
 
-	// Get all credentials in the vault
 	credentials, err := h.credentialService.GetAllCredentialsByVaultID(c.Context(), vaultID)
 	if err != nil {
 		if errors.Is(err, service.ErrVaultNotFound) {
@@ -157,16 +150,13 @@ func (h *CredentialHandler) Update(c fiber.Ctx) error {
 	res := response.HTTPResponse{Ctx: c}
 	id := c.Params("id")
 
-	// Parse the request body
 	var req dto.UpdateCredentialRequest
 	if err := c.Bind().Body(&req); err != nil {
 		return err
 	}
 
-	// Ensure ID in path matches ID in body
 	req.ID = id
 
-	// Update the credential
 	credential, err := h.credentialService.UpdateCredential(c.Context(), &req)
 	if err != nil {
 		if errors.Is(err, service.ErrCredentialNotFound) {
@@ -198,7 +188,6 @@ func (h *CredentialHandler) Delete(c fiber.Ctx) error {
 	res := response.HTTPResponse{Ctx: c}
 	id := c.Params("id")
 
-	// Delete the credential
 	if err := h.credentialService.DeleteCredential(c.Context(), id); err != nil {
 		if errors.Is(err, service.ErrCredentialNotFound) {
 			return res.Message(fiber.StatusNotFound, "Credential not found")
@@ -209,17 +198,14 @@ func (h *CredentialHandler) Delete(c fiber.Ctx) error {
 	return res.Ok(SuccessResponse{Data: "Credential deleted successfully"})
 }
 
-// GetDefaultVault returns the default vault for the current user
 func (h *CredentialHandler) GetDefaultVault(c fiber.Ctx) error {
 	res := response.HTTPResponse{Ctx: c}
 
-	// Get the user ID from the authenticated context
 	userID := c.Locals("user_id").(string)
 	if userID == "" {
 		return res.Message(fiber.StatusUnauthorized, "Unauthorized")
 	}
 
-	// Get or create the default vault
 	vault, err := h.vaultService.EnsureDefaultVault(c.Context(), userID)
 	if err != nil {
 		return res.Message(fiber.StatusInternalServerError, "Failed to get default vault")

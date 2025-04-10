@@ -3,10 +3,10 @@ package secret
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"key-haven-back/config"
 	"log"
 	"os"
@@ -54,7 +54,7 @@ func saveKeyToFile(keyHex string) error {
 	}
 
 	// Write the key with restricted permissions
-	return ioutil.WriteFile(keyPath, []byte(keyHex), 0600)
+	return os.WriteFile(keyPath, []byte(keyHex), 0600)
 }
 
 // loadKeyFromFile attempts to load a previously saved key
@@ -62,7 +62,7 @@ func loadKeyFromFile() (string, error) {
 	keyDir := config.GetEnvOrDefault("KEY_STORAGE_DIR", "./keys")
 	keyPath := filepath.Join(keyDir, "paseto.key")
 
-	data, err := ioutil.ReadFile(keyPath)
+	data, err := os.ReadFile(keyPath)
 	if err != nil {
 		return "", err
 	}
@@ -75,18 +75,30 @@ func getOrCreateSymmetricKey() paseto.V4SymmetricKey {
 	// Use sync.Once to ensure the key is only created once per application lifetime
 	symmetricKeyOnce.Do(func() {
 		// First, check environment variable
-		keyHex := config.GetEnvOrDefault("PASETO_KEY", "")
+		keyStr := config.GetEnvOrDefault("PASETO_KEY", "")
 
 		// If we have a key from the environment, use it
-		if keyHex != "" {
+		if keyStr != "" {
 			log.Printf("Using PASETO key from environment variable")
 
-			// Decode the hex key
-			keyBytes, err := hex.DecodeString(keyHex)
+			var keyBytes []byte
+			var err error
+
+			// Try to decode as base64 first (with and without padding)
+			keyBytes, err = base64.StdEncoding.DecodeString(keyStr)
 			if err != nil {
-				log.Printf("Error decoding PASETO key from environment: %v. This is critical - check your PASETO_KEY format.", err)
-				// We don't fall back to a new key here because that would defeat the purpose of setting the env var
-				panic("PASETO_KEY environment variable is not valid hexadecimal")
+				// Try without padding
+				keyBytes, err = base64.RawStdEncoding.DecodeString(keyStr)
+			}
+
+			// If base64 fails, try hex decoding
+			if err != nil {
+				keyBytes, err = hex.DecodeString(keyStr)
+				if err != nil {
+					log.Printf("Error decoding PASETO key from environment: %v. This is critical - key must be valid base64 or hex.", err)
+					// We don't fall back to a new key here because that would defeat the purpose of setting the env var
+					panic("PASETO_KEY environment variable is not valid base64 or hexadecimal")
+				}
 			}
 
 			// Use the correct function to load a symmetric key
@@ -103,12 +115,25 @@ func getOrCreateSymmetricKey() paseto.V4SymmetricKey {
 		}
 
 		// If not in environment, try to load from file
-		loadedKeyHex, err := loadKeyFromFile()
+		loadedKeyStr, err := loadKeyFromFile()
 		if err == nil {
-			// Use the key from file
-			keyBytes, err := hex.DecodeString(loadedKeyHex)
-			if err != nil {
-				log.Printf("Error decoding PASETO key from file: %v.", err)
+			// Try to decode the key from file - same logic as above
+			var keyBytes []byte
+			var decodeErr error
+
+			// Try to decode as base64 first
+			keyBytes, decodeErr = base64.StdEncoding.DecodeString(loadedKeyStr)
+			if decodeErr != nil {
+				// Try without padding
+				keyBytes, decodeErr = base64.RawStdEncoding.DecodeString(loadedKeyStr)
+				if decodeErr != nil {
+					// Finally try hex
+					keyBytes, decodeErr = hex.DecodeString(loadedKeyStr)
+				}
+			}
+
+			if decodeErr != nil {
+				log.Printf("Error decoding PASETO key from file: %v.", decodeErr)
 			} else {
 				key, err := paseto.V4SymmetricKeyFromBytes(keyBytes)
 				if err == nil {
@@ -122,16 +147,17 @@ func getOrCreateSymmetricKey() paseto.V4SymmetricKey {
 
 		// If we get here, we need to generate a new key
 		symmetricKey = paseto.NewV4SymmetricKey()
-		keyHexStr := hex.EncodeToString(symmetricKey.ExportBytes())
+		// Use base64 encoding for the key going forward
+		keyBase64Str := base64.StdEncoding.EncodeToString(symmetricKey.ExportBytes())
 
 		// Save the key for future use
-		if err := saveKeyToFile(keyHexStr); err != nil {
+		if err := saveKeyToFile(keyBase64Str); err != nil {
 			log.Printf("Warning: Failed to save PASETO key: %v", err)
 		}
 
 		keyFingerprint = generateKeyFingerprint(symmetricKey)
 		log.Printf("IMPORTANT: Generated new PASETO key. Add this to your .env file:")
-		log.Printf("PASETO_KEY=%s", keyHexStr)
+		log.Printf("PASETO_KEY=%s", keyBase64Str)
 	})
 
 	return symmetricKey

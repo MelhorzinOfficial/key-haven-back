@@ -11,34 +11,28 @@ import (
 	"github.com/gofiber/fiber/v3"
 )
 
-// ErrorResponse represents an error response
 type ErrorResponse struct {
 	Message string `json:"message"`
 }
 
-// SuccessResponse represents a generic success response
 type SuccessResponse struct {
 	Data interface{} `json:"data"`
 }
 
-// AuthHandler handles authentication requests
 type AuthHandler struct {
 	authService service.AuthService
 }
 
-// NewAuthHandler creates a new AuthHandler
 func NewAuthHandler(authService service.AuthService) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
 	}
 }
 
-// handleError centralizes error handling
 func handleError(c fiber.Ctx, status int, message string) error {
 	return c.Status(status).JSON(ErrorResponse{Message: message})
 }
 
-// setAuthCookie sets the authentication cookie
 func setAuthCookie(c fiber.Ctx, token string, duration time.Duration) {
 	c.Cookie(&fiber.Cookie{
 		Name:     "token",

@@ -54,7 +54,6 @@ type CredentialDetailResponse struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-// NewCredential creates a new Credential domain object from a CreateCredentialRequest
 func NewCredential(req *CreateCredentialRequest, encryptedPassword string, vaultID string) *user.Credential {
 	now := time.Now()
 	return &user.Credential{
