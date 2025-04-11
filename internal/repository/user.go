@@ -17,7 +17,6 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 )
 
-// UserRepository defines the interface for user-related database operations
 type UserRepository interface {
 	Create(ctx context.Context, user *user.User) error
 	FindByID(ctx context.Context, id string) (*user.User, error)
@@ -25,12 +24,10 @@ type UserRepository interface {
 	UpdatePassword(ctx context.Context, userID, hashedPassword string) error
 }
 
-// MongoUserRepository implements UserRepository interface using MongoDB
 type MongoUserRepository struct {
 	repo *MongoRepository[user.User]
 }
 
-// NewUserRepository creates a new user repository with MongoDB implementation
 func NewUserRepository(database *mongo.Database) UserRepository {
 	// Create the generic repository
 	collection := database.Collection("users")
@@ -47,7 +44,6 @@ func NewUserRepository(database *mongo.Database) UserRepository {
 	}
 }
 
-// Create adds a new user to the database
 func (r *MongoUserRepository) Create(ctx context.Context, user *user.User) error {
 	// Check if email already exists
 	existingUser, err := r.FindByEmail(ctx, user.Email)
@@ -58,7 +54,7 @@ func (r *MongoUserRepository) Create(ctx context.Context, user *user.User) error
 	// Use the generic repository to insert
 	err = r.repo.Create(ctx, *user)
 	if err != nil {
-		if err == ErrDuplicateKey {
+		if errors.Is(err, ErrDuplicateKey) {
 			return ErrEmailAlreadyUsed
 		}
 		return err
@@ -67,31 +63,30 @@ func (r *MongoUserRepository) Create(ctx context.Context, user *user.User) error
 	return nil
 }
 
-// FindByID retrieves a user by their ID
 func (r *MongoUserRepository) FindByID(ctx context.Context, id string) (*user.User, error) {
-	user, err := r.repo.FindByID(ctx, id, "_id")
+	u, err := r.repo.FindByID(ctx, id, "_id")
 	if err != nil {
-		if err == ErrDocumentNotFound {
+		if errors.Is(err, ErrDocumentNotFound) {
 			return nil, ErrUserNotFound
 		}
 		return nil, err
 	}
-	return user, nil
+
+	return u, nil
 }
 
-// FindByEmail retrieves a user by their email address
 func (r *MongoUserRepository) FindByEmail(ctx context.Context, email string) (*user.User, error) {
-	user, err := r.repo.FindOne(ctx, bson.M{"email": email})
+	u, err := r.repo.FindOne(ctx, bson.M{"email": email})
 	if err != nil {
-		if err == ErrDocumentNotFound {
+		if errors.Is(err, ErrDocumentNotFound) {
 			return nil, ErrUserNotFound
 		}
 		return nil, err
 	}
-	return user, nil
+
+	return u, nil
 }
 
-// UpdatePassword updates a user's password
 func (r *MongoUserRepository) UpdatePassword(ctx context.Context, userID, hashedPassword string) error {
 	update := bson.M{
 		"$set": bson.M{
@@ -102,10 +97,11 @@ func (r *MongoUserRepository) UpdatePassword(ctx context.Context, userID, hashed
 
 	err := r.repo.Update(ctx, userID, "_id", update)
 	if err != nil {
-		if err == ErrDocumentNotFound {
+		if errors.Is(err, ErrDocumentNotFound) {
 			return ErrUserNotFound
 		}
 		return err
 	}
+
 	return nil
 }

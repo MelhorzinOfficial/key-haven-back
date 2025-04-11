@@ -27,6 +27,8 @@ modules.xml
 # Go workspace file
 go.work
 
+.env
+
 # End of https://www.toptal.com/developers/gitignore/api/go
 
 # Project

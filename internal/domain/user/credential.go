@@ -10,7 +10,7 @@ type Credential struct {
 	EncryptPassword string `json:"encrypt_password" bson:"encrypt_password"`
 	URL             string `json:"url" bson:"url"`
 
-	VaultID string `json:"valt_id" bson:"valt_id"`
+	VaultID string `json:"vault_id" bson:"vault_id"`
 
 	CreatedAt time.Time `json:"created_at" bson:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" bson:"updated_at"`

@@ -11,34 +11,28 @@ import (
 	"github.com/gofiber/fiber/v3"
 )
 
-// ErrorResponse represents an error response
 type ErrorResponse struct {
 	Message string `json:"message"`
 }
 
-// SuccessResponse represents a generic success response
 type SuccessResponse struct {
 	Data interface{} `json:"data"`
 }
 
-// AuthHandler handles authentication requests
 type AuthHandler struct {
 	authService service.AuthService
 }
 
-// NewAuthHandler creates a new AuthHandler
 func NewAuthHandler(authService service.AuthService) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
 	}
 }
 
-// handleError centralizes error handling
 func handleError(c fiber.Ctx, status int, message string) error {
 	return c.Status(status).JSON(ErrorResponse{Message: message})
 }
 
-// setAuthCookie sets the authentication cookie
 func setAuthCookie(c fiber.Ctx, token string, duration time.Duration) {
 	c.Cookie(&fiber.Cookie{
 		Name:     "token",
@@ -100,7 +94,7 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 		return handleError(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 
-	response, err := h.authService.Login(c.Context(), &req)
+	r, err := h.authService.Login(c.Context(), &req)
 	if err != nil {
 		if errors.Is(err, repository.ErrInvalidCredentials) {
 			return handleError(c, fiber.StatusUnauthorized, "Invalid email or password")
@@ -108,8 +102,8 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 		return handleError(c, fiber.StatusInternalServerError, "Failed to process login")
 	}
 
-	setAuthCookie(c, response.Token, 24*time.Hour)
-	return c.Status(fiber.StatusOK).JSON(SuccessResponse{Data: response})
+	setAuthCookie(c, r.Token, 24*time.Hour)
+	return c.Status(fiber.StatusOK).JSON(SuccessResponse{Data: r})
 }
 
 // Logout godoc

@@ -8,10 +8,6 @@ import (
 type Config struct {
 	MongodbURL string `required:"true" env:"MONGODB_URL"`
 
-	RedisHost     string `required:"true" env:"REDIS_HOST"`
-	RedisPort     string `required:"true" env:"REDIS_PORT"`
-	RedisPassword string `required:"true" env:"REDIS_PASSWORD"`
-
 	Port string `required:"true" env:"PORT"`
 }
 

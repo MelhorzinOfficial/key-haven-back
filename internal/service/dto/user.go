@@ -13,6 +13,11 @@ type CreateUserRequest struct {
 	Name     string `json:"name" validate:"required"`
 }
 
+type CreateUserResponse struct {
+	Email string `json:"email"`
+	Name  string `json:"name" `
+}
+
 type LoginRequest struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required"`

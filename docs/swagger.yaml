@@ -1,20 +1,34 @@
-basePath: /
 definitions:
-  handler.ErrorResponse:
+  dto.CreateCredentialRequest:
     properties:
-      message:
+      description:
         type: string
-    type: object
-  handler.ResponseSuccess:
-    properties:
-      message:
+      master_password:
+        minLength: 12
         type: string
+      name:
+        type: string
+      password:
+        minLength: 12
+        type: string
+      url:
+        type: string
+      user_id:
+        type: string
+      username:
+        type: string
+      vault_id:
+        type: string
+      vault_name:
+        type: string
+    required:
+    - master_password
+    - name
+    - password
+    - user_id
+    - username
     type: object
-  handler.SuccessResponse:
-    properties:
-      data: {}
-    type: object
-  model.CreateUserRequest:
+  dto.CreateUserRequest:
     properties:
       email:
         type: string
@@ -28,7 +42,63 @@ definitions:
     - name
     - password
     type: object
-  model.LoginRequest:
+  dto.CreateVaultRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      user_id:
+        type: string
+    required:
+    - name
+    - user_id
+    type: object
+  dto.CredentialDetailResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+      updated_at:
+        type: string
+      url:
+        type: string
+      username:
+        type: string
+      vault_id:
+        type: string
+      vault_name:
+        type: string
+    type: object
+  dto.CredentialListItem:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+      url:
+        type: string
+      username:
+        type: string
+      vault_id:
+        type: string
+      vault_name:
+        type: string
+    type: object
+  dto.LoginRequest:
     properties:
       email:
         type: string
@@ -38,28 +108,68 @@ definitions:
     - email
     - password
     type: object
-host: localhost:8080
+  dto.UpdateCredentialRequest:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      master_password:
+        minLength: 12
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+      url:
+        type: string
+      username:
+        type: string
+    required:
+    - id
+    - master_password
+    - name
+    - username
+    type: object
+  dto.UpdateVaultRequest:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    required:
+    - id
+    - name
+    type: object
+  dto.VaultResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  handler.ErrorResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  handler.SuccessResponse:
+    properties:
+      data: {}
+    type: object
 info:
   contact: {}
-  description: This is the API for Key Haven
-  title: Key Haven API
-  version: "1.0"
 paths:
-  /:
-    get:
-      consumes:
-      - application/json
-      description: Check if the service is healthy
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.ResponseSuccess'
-      summary: Check if the service is healthy
-      tags:
-      - health
   /auth/login:
     post:
       consumes:
@@ -71,7 +181,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.LoginRequest'
+          $ref: '#/definitions/dto.LoginRequest'
       produces:
       - application/json
       responses:
@@ -124,7 +234,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.CreateUserRequest'
+          $ref: '#/definitions/dto.CreateUserRequest'
       produces:
       - application/json
       responses:
@@ -147,4 +257,423 @@ paths:
       summary: Register a new user
       tags:
       - Auth
+  /credential:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new credential optionally in a specified vault
+      parameters:
+      - description: Credential creation data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateCredentialRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.CredentialListItem'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "422":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Create a new credential
+      tags:
+      - Credentials
+  /credential/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a credential by its ID
+      parameters:
+      - description: Credential ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            $ref: '#/definitions/handler.SuccessResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Delete a credential
+      tags:
+      - Credentials
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a credential by its ID and decrypts the password
+      parameters:
+      - description: Credential ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Master password for decryption
+        in: query
+        name: master_password
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CredentialDetailResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get credential details
+      tags:
+      - Credentials
+    put:
+      consumes:
+      - application/json
+      description: Updates a credential's details and optionally its password
+      parameters:
+      - description: Credential ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Credential update data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateCredentialRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CredentialListItem'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "422":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Update a credential
+      tags:
+      - Credentials
+  /credential/vault/{vault_id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all credentials in a specified vault
+      parameters:
+      - description: Vault ID
+        in: path
+        name: vault_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.CredentialListItem'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Vault not found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get all credentials in a vault
+      tags:
+      - Credentials
+  /vault:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all vaults for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.VaultResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get all vaults
+      tags:
+      - Vaults
+    post:
+      consumes:
+      - application/json
+      description: Creates a new vault for the authenticated user
+      parameters:
+      - description: Vault creation data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateVaultRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.VaultResponse'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "409":
+          description: Vault name already exists
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "422":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Create a new vault
+      tags:
+      - Vaults
+  /vault/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a vault by its ID
+      parameters:
+      - description: Vault ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            $ref: '#/definitions/handler.SuccessResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Delete a vault
+      tags:
+      - Vaults
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a vault by its ID
+      parameters:
+      - description: Vault ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.VaultResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get vault details
+      tags:
+      - Vaults
+    put:
+      consumes:
+      - application/json
+      description: Updates a vault's details
+      parameters:
+      - description: Vault ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Vault update data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateVaultRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.VaultResponse'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "409":
+          description: Vault name already exists
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "422":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Update a vault
+      tags:
+      - Vaults
+  /vault/default:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves or creates the default vault for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.VaultResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get default vault
+      tags:
+      - Vaults
 swagger: "2.0"
