@@ -8,6 +8,6 @@ import (
 
 func ResponseInternalServerErrorHandler(c fiber.Ctx, err error) error {
 	var res = response.HTTPResponse{Ctx: c}
-	// TODO: Implementar log de erro
+	println("InternalServerError", err)
 	return res.InternalServerError()
 }

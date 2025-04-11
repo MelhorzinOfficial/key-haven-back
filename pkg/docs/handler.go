@@ -26,6 +26,7 @@ func RegisterDocsRouter(app *fiber.App) {
 	app.Get("/public/openapi.json", func(ctx fiber.Ctx) error {
 		dir, err := os.Getwd()
 		if err != nil {
+			println("Getwd error", err)
 			return fiber.NewError(fiber.StatusInternalServerError, "Fail to get current directory: "+err.Error())
 		}
 		filename := path.Join(dir, "docs", "swagger.json")
@@ -48,7 +49,7 @@ func RegisterDocsRouter(app *fiber.App) {
 		}
 
 		provider := &Provider{
-			URL:   "http://localhost:8080/public/openapi.json",
+			URL:   "/public/openapi.json",
 			Name:  name,
 			Theme: randomTheme(),
 		}
