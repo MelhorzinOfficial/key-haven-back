@@ -45,7 +45,7 @@ func (h *CredentialHandler) Create(c fiber.Ctx) error {
 
 	var req dto.CreateCredentialRequest
 	if err := c.Bind().Body(&req); err != nil {
-		return err
+		return res.Message(fiber.StatusBadRequest, "Invalid request body")
 	}
 
 	req.UserID = userID
@@ -152,7 +152,7 @@ func (h *CredentialHandler) Update(c fiber.Ctx) error {
 
 	var req dto.UpdateCredentialRequest
 	if err := c.Bind().Body(&req); err != nil {
-		return err
+		return res.Message(fiber.StatusBadRequest, "Invalid request body")
 	}
 
 	req.ID = id

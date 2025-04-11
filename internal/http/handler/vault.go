@@ -45,7 +45,7 @@ func (h *VaultHandler) Create(c fiber.Ctx) error {
 
 	var req dto.CreateVaultRequest
 	if err := c.Bind().Body(&req); err != nil {
-		return err
+		return res.Message(fiber.StatusBadRequest, "Invalid request body")
 	}
 
 	req.UserID = userID
@@ -78,7 +78,6 @@ func (h *VaultHandler) GetByID(c fiber.Ctx) error {
 	res := response.HTTPResponse{Ctx: c}
 	id := c.Params("id")
 
-	// Get the vault
 	vault, err := h.vaultService.GetVaultByID(c.Context(), id)
 	if err != nil {
 		if errors.Is(err, service.ErrVaultNotFound) {
@@ -87,7 +86,6 @@ func (h *VaultHandler) GetByID(c fiber.Ctx) error {
 		return res.Message(fiber.StatusInternalServerError, "Failed to retrieve vault")
 	}
 
-	// Validate that the user has access to this vault
 	userID := c.Locals("user_id").(string)
 	if vault.UserID != userID {
 		return res.Message(fiber.StatusUnauthorized, "You don't have access to this vault")
@@ -175,7 +173,7 @@ func (h *VaultHandler) Update(c fiber.Ctx) error {
 
 	var req dto.UpdateVaultRequest
 	if err := c.Bind().Body(&req); err != nil {
-		return err
+		return res.Message(fiber.StatusBadRequest, "Invalid request body")
 	}
 
 	req.ID = id
