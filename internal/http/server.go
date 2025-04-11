@@ -54,7 +54,7 @@ func NewServer(
 
 	// Configure middlewares
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"http://localhost:1420"},
+		AllowOrigins: []string{cfg.CorsAllowedOrigins},
 		AllowCredentials: true,
 	}))
 	app.Use(requestid.New())
