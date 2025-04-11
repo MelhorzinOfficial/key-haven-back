@@ -9,6 +9,8 @@ type Config struct {
 	MongodbURL string `required:"true" env:"MONGODB_URL"`
 
 	Port string `required:"true" env:"PORT"`
+
+	CorsAllowedOrigins string `env:"CORS_ALLOWED_ORIGINS"`
 }
 
 func GetEnvOrDefault(key string, defaultValue string) string {
