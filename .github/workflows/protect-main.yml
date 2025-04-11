@@ -1,0 +1,16 @@
+name: PR Protection for Main Branch
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check-source-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if source branch is not develop
+        run: |
+          if [[ "${{ github.head_ref }}" != "develop" ]]; then
+            echo "❌ Only PRs from 'develop' to 'main' are allowed."
+            exit 1
+          fi
