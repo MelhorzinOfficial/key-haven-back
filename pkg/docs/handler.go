@@ -1,71 +1,70 @@
 package docs
 
 import (
-	"bytes"
-	"fmt"
-	"html/template"
-	"math/rand"
-	"os"
-	"path"
+  "bytes"
+  "embed"
+  "fmt"
+  "html/template"
+  "math/rand"
+  "path"
 
-	"github.com/gofiber/fiber/v3"
+  "github.com/gofiber/fiber/v3"
 )
 
 type Provider struct {
-	URL   string
-	Name  string
-	Theme string
+  URL   string
+  Name  string
+  Theme string
 }
 
 func randomTheme() string {
-	themes := []string{"bluePlanet", "deepSpace", "kepler"}
-	return themes[rand.Intn(len(themes))]
+  themes := []string{"bluePlanet", "deepSpace", "kepler"}
+  return themes[rand.Intn(len(themes))]
 }
+func RegisterDocsRouter(fs embed.FS) func(app *fiber.App) {
+  return func(app *fiber.App) {
+    app.Get("/public/openapi.json", func(ctx fiber.Ctx) error {
+      data, err := fs.ReadFile("docs/swagger.json")
+      if err != nil {
+        return fiber.NewError(fiber.StatusInternalServerError, "Fail to read swagger.json: "+err.Error())
+      }
+      ctx.Type("json")
+      return ctx.Send(data)
+    })
 
-func RegisterDocsRouter(app *fiber.App) {
-	app.Get("/public/openapi.json", func(ctx fiber.Ctx) error {
-		dir, err := os.Getwd()
-		if err != nil {
-			return fiber.NewError(fiber.StatusInternalServerError, "Fail to get current directory: "+err.Error())
-		}
-		filename := path.Join(dir, "docs", "swagger.json")
-		return ctx.SendFile(filename)
-	})
+    app.Get("/docs", func(ctx fiber.Ctx) error {
+      name := ctx.Query("name", "scalar")
 
-	app.Get("/docs", func(ctx fiber.Ctx) error {
-		dir, err := os.Getwd()
-		if err != nil {
-			return fiber.NewError(fiber.StatusInternalServerError, "Fail to get current directory: "+err.Error())
-		}
+      filename := path.Join("pkg/docs", fmt.Sprintf("%s.html", name))
+      data, err := fs.ReadFile(filename)
+      if err != nil {
+        return fiber.NewError(fiber.StatusInternalServerError, "Fail to read template: "+err.Error())
+      }
 
-		name := ctx.Query("name", "scalar")
+      tmpl, err := template.New(name).Parse(string(data))
+      if err != nil {
+        return fiber.NewError(fiber.StatusInternalServerError, "Fail to parse template: "+err.Error())
+      }
 
-		filename := path.Join(dir, "pkg", "docs", fmt.Sprintf("%s.html", name))
-		tmpl, err := template.ParseFiles(filename)
-		if err != nil {
-			fmt.Println("ParseFiles error")
-			return fiber.NewError(fiber.StatusInternalServerError, "Fail to generate docs: "+err.Error())
-		}
+      provider := &Provider{
+        URL:   "/public/openapi.json",
+        Name:  name,
+        Theme: randomTheme(),
+      }
 
-		provider := &Provider{
-			URL:   "http://localhost:8080/public/openapi.json",
-			Name:  name,
-			Theme: randomTheme(),
-		}
+      var bufferHTML bytes.Buffer
+      if err := tmpl.Execute(&bufferHTML, provider); err != nil {
+        return fiber.NewError(fiber.StatusInternalServerError, "Fail to execute template: "+err.Error())
+      }
 
-		var bufferHTML bytes.Buffer
-		if err := tmpl.Execute(&bufferHTML, provider); err != nil {
-			fmt.Println("Execute Replace Text")
-			return fiber.NewError(fiber.StatusInternalServerError, "Fail to generate docs: "+err.Error())
-		}
-
-		return ctx.Type("html").SendString(bufferHTML.String())
-	})
+      return ctx.Type("html").SendString(bufferHTML.String())
+    })
+  }
 }
 
 type RegisterDocsRouterFunc func(app *fiber.App)
 
 // RegisterDocsRouterFuncProvider provider for Fx
-func RegisterDocsRouterFuncProvider() RegisterDocsRouterFunc {
-	return RegisterDocsRouter
+func RegisterDocsRouterFuncProvider(fs embed.FS) RegisterDocsRouterFunc {
+  return RegisterDocsRouter(fs)
 }
