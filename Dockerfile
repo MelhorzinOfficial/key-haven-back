@@ -7,8 +7,8 @@ WORKDIR /src
 COPY ./go.mod ./go.sum ./
 RUN go mod download
 COPY ./ ./
-RUN CGO_ENABLED=0 go build -o /app ./main.go
 
+RUN CGO_ENABLED=0 go build -o /app ./main.go
 # Image
 FROM gcr.io/distroless/static-debian12 AS production
 USER nonroot:nonroot
