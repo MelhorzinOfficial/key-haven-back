@@ -1,155 +1,86 @@
 package middleware
 
 import (
-	"fmt"
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
-	"github.com/valyala/fasthttp"
 	"key-haven-back/pkg/secret"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 )
 
-func Test_checkToken(t *testing.T) {
-	token := getToken()
-
-	app := fiber.New()
+func TestIsAuthenticatedHandler(t *testing.T) {
+	validToken, _ := secret.GenerateToken("123", "test@example.com", time.Hour)
 
 	tests := map[string]struct {
-		setup   func(c fiber.Ctx)
-		want    string
-		wantErr assert.ErrorAssertionFunc
+		setup       func(req *http.Request)
+		wantStatus  int
+		wantMessage string
+		wantNext    bool
 	}{
-		"valid": {
-			setup: func(c fiber.Ctx) {
-				c.Request().Header.SetCookie("token", token)
+		"valid_token_in_header": {
+			setup: func(req *http.Request) {
+				req.Header.Set("Authorization", "Bearer "+validToken)
 			},
-			want:    token,
-			wantErr: assert.NoError,
+			wantStatus: fiber.StatusOK,
+			wantNext:   true,
 		},
-		"token invalid": {
-			setup: func(c fiber.Ctx) {
-				c.Request().Header.SetCookie("token", token[1:])
+		"valid_token_in_cookie": {
+			setup: func(req *http.Request) {
+				req.AddCookie(&http.Cookie{Name: "token", Value: validToken})
 			},
-			wantErr: assert.Error,
+			wantStatus: fiber.StatusOK,
+			wantNext:   true,
 		},
-		"empty token": {
-			setup: func(c fiber.Ctx) {
-				c.Request().Header.SetCookie("token", "")
+		"no_token_provided": {
+			setup:       func(req *http.Request) {},
+			wantStatus:  fiber.StatusUnauthorized,
+			wantMessage: "No authentication token provided",
+			wantNext:    false,
+		},
+		"invalid_token": {
+			setup: func(req *http.Request) {
+				req.Header.Set("Authorization", "Bearer "+validToken[1:])
 			},
-			wantErr: assert.Error,
-		},
-		"nil cookie": {
-			setup:   func(c fiber.Ctx) {},
-			wantErr: assert.Error,
+			wantStatus:  fiber.StatusUnauthorized,
+			wantMessage: "Invalid token",
+			wantNext:    false,
 		},
 	}
-	for n, tt := range tests {
-		t.Run(n, func(t *testing.T) {
-			c := app.AcquireCtx(&fasthttp.RequestCtx{})
-			tt.setup(c)
 
-			got, err := checkToken(c)
-			if !tt.wantErr(t, err, fmt.Sprintf("checkToken(%v)", c)) {
-				return
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			app := fiber.New()
+
+			app.Use(IsAuthenticatedHandler)
+
+			app.Get("/", func(c fiber.Ctx) error {
+				userID := c.Locals("user_id").(string)
+				email := c.Locals("email").(string)
+				return c.JSON(fiber.Map{
+					"user_id": userID,
+					"email":   email,
+				})
+			})
+
+			req := httptest.NewRequest("GET", "/", nil)
+			tt.setup(req)
+
+			resp, err := app.Test(req)
+			assert.NoError(t, err, "Error during request test")
+			assert.Equal(t, tt.wantStatus, resp.StatusCode, "Status code mismatch")
+
+			if !tt.wantNext {
+				respBody := make([]byte, resp.ContentLength)
+				_, _ = resp.Body.Read(respBody)
+				assert.Contains(t, string(respBody), tt.wantMessage, "Response message mismatch")
+			} else {
+				respBody := make([]byte, resp.ContentLength)
+				_, _ = resp.Body.Read(respBody)
+				assert.Contains(t, string(respBody), `"user_id":"123"`, "User ID mismatch")
+				assert.Contains(t, string(respBody), `"email":"test@example.com"`, "Email mismatch")
 			}
-
-			assert.Equalf(t, tt.want, got, "checkToken(%v)", c)
 		})
 	}
-}
-
-func Test_checkCookieToken(t *testing.T) {
-	token := getToken()
-
-	tests := map[string]struct {
-		tokenJwt string
-		want     string
-		wantErr  assert.ErrorAssertionFunc
-	}{
-		"valid": {
-			tokenJwt: token,
-			want:     token,
-			wantErr:  assert.NoError,
-		},
-		"invalid": {
-			tokenJwt: token[1:],
-			want:     "",
-			wantErr:  assert.Error,
-		},
-	}
-	for n, tt := range tests {
-		t.Run(n, func(t *testing.T) {
-			got, err := checkCookieToken(tt.tokenJwt)
-			if !tt.wantErr(t, err, fmt.Sprintf("checkCookieToken(%v)", tt.tokenJwt)) {
-				return
-			}
-
-			assert.Equalf(t, tt.want, got, "checkCookieToken(%v)", tt.tokenJwt)
-		})
-	}
-}
-
-func Test_checkAuthToken(t *testing.T) {
-	token := getToken()
-
-	tests := map[string]struct {
-		authHeader string
-		want       string
-		wantErr    assert.ErrorAssertionFunc
-	}{
-		"valid": {
-			authHeader: fmt.Sprintf("Bearer %s", token),
-			want:       token,
-			wantErr:    assert.NoError,
-		},
-		"token invalid": {
-			authHeader: fmt.Sprintf("Bearer %s", token[1:]),
-			wantErr:    assert.Error,
-		},
-		"invalid format": {
-			authHeader: "Bearer",
-			wantErr:    assert.Error,
-		},
-		"invalid header": {
-			authHeader: "Basic " + token,
-			wantErr:    assert.Error,
-		},
-	}
-	for n, tt := range tests {
-		t.Run(n, func(t *testing.T) {
-			got, err := checkAuthToken(tt.authHeader)
-			if !tt.wantErr(t, err, fmt.Sprintf("checkAuthToken(%v)", tt.authHeader)) {
-				return
-			}
-			assert.Equalf(t, tt.want, got, "checkAuthToken(%v)", tt.authHeader)
-		})
-	}
-}
-
-func Test_validateTokenFormat(t *testing.T) {
-	tests := map[string]struct {
-		token string
-		want  bool
-	}{
-		"valid": {
-			token: getToken(),
-			want:  true,
-		},
-		"invalid": {
-			token: getToken()[1:],
-			want:  false,
-		},
-	}
-	for n, tt := range tests {
-		t.Run(n, func(t *testing.T) {
-			got := validateTokenFormat(tt.token)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-func getToken() string {
-	s, _ := secret.GenerateToken("0", "test@example.com", time.Hour)
-	return s
 }
