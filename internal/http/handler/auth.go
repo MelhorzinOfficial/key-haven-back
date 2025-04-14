@@ -1,48 +1,48 @@
 package handler
 
 import (
-	"errors"
-	"key-haven-back/internal/http/response"
-	"key-haven-back/internal/repository"
-	"key-haven-back/internal/service"
-	"key-haven-back/internal/service/dto"
-	"time"
+  "errors"
+  "key-haven-back/internal/http/response"
+  "key-haven-back/internal/repository"
+  "key-haven-back/internal/service"
+  "key-haven-back/internal/service/dto"
+  "time"
 
-	"github.com/gofiber/fiber/v3"
+  "github.com/gofiber/fiber/v3"
 )
 
 type ErrorResponse struct {
-	Message string `json:"message"`
+  Message string `json:"message"`
 }
 
 type SuccessResponse struct {
-	Data interface{} `json:"data"`
+  Data interface{} `json:"data"`
 }
 
 type AuthHandler struct {
-	authService service.AuthService
+  authService service.AuthService
 }
 
 func NewAuthHandler(authService service.AuthService) *AuthHandler {
-	return &AuthHandler{
-		authService: authService,
-	}
+  return &AuthHandler{
+    authService: authService,
+  }
 }
 
 func handleError(c fiber.Ctx, status int, message string) error {
-	return c.Status(status).JSON(ErrorResponse{Message: message})
+  return c.Status(status).JSON(ErrorResponse{Message: message})
 }
 
 func setAuthCookie(c fiber.Ctx, token string, duration time.Duration) {
-	c.Cookie(&fiber.Cookie{
-		Name:     "token",
-		Value:    token,
-		Path:     "/",
-		Expires:  time.Now().Add(duration),
-		HTTPOnly: true,
-		Secure:   true,
-		SameSite: "Strict",
-	})
+  c.Cookie(&fiber.Cookie{
+    Name:     "token",
+    Value:    token,
+    Path:     "/",
+    Expires:  time.Now().Add(duration),
+    HTTPOnly: true,
+    Secure:   true,
+    SameSite: "Strict",
+  })
 }
 
 // Register godoc
@@ -58,22 +58,22 @@ func setAuthCookie(c fiber.Ctx, token string, duration time.Duration) {
 // @Failure 500 {object} ErrorResponse "Internal server error"
 // @Router /auth/register [post]
 func (h *AuthHandler) Register(c fiber.Ctx) error {
-	var res = response.HTTPResponse{Ctx: c}
+  var res = response.HTTPResponse{Ctx: c}
 
-	var req dto.CreateUserRequest
-	if err := c.Bind().Body(&req); err != nil {
-		return err
-	}
+  var req dto.CreateUserRequest
+  if err := c.Bind().Body(&req); err != nil {
+    return err
+  }
 
-	user, err := h.authService.Register(c.Context(), &req)
-	if err != nil {
-		if errors.Is(err, repository.ErrEmailAlreadyUsed) {
-			return res.Message(fiber.StatusConflict, "Email already in use")
-		}
-		return res.Message(fiber.StatusInternalServerError, "Failed to process registration")
-	}
+  user, err := h.authService.Register(c.Context(), &req)
+  if err != nil {
+    if errors.Is(err, repository.ErrEmailAlreadyUsed) {
+      return res.Message(fiber.StatusConflict, "Email already in use")
+    }
+    return res.Message(fiber.StatusInternalServerError, "Failed to process registration")
+  }
 
-	return res.Created(SuccessResponse{Data: user})
+  return res.Created(SuccessResponse{Data: user})
 }
 
 // Login godoc
@@ -89,24 +89,23 @@ func (h *AuthHandler) Register(c fiber.Ctx) error {
 // @Failure 500 {object} ErrorResponse "Internal server error"
 // @Router /auth/login [post]
 func (h *AuthHandler) Login(c fiber.Ctx) error {
-	var req dto.LoginRequest
-	if err := c.Bind().Body(&req); err != nil {
-		return handleError(c, fiber.StatusBadRequest, "Invalid request body")
-	}
+  var req dto.LoginRequest
+  if err := c.Bind().Body(&req); err != nil {
+    return handleError(c, fiber.StatusBadRequest, "Invalid request body")
+  }
 
-	r, err := h.authService.Login(c.Context(), &req)
-	if err != nil {
-		if errors.Is(err, repository.ErrInvalidCredentials) {
-			return handleError(c, fiber.StatusUnauthorized, "Invalid email or password")
-		}
-		return handleError(c, fiber.StatusInternalServerError, "Failed to process login")
-	}
+  r, err := h.authService.Login(c.Context(), &req)
+  if err != nil {
+    if errors.Is(err, repository.ErrInvalidCredentials) {
+      return handleError(c, fiber.StatusUnauthorized, "Invalid email or password")
+    }
+    return handleError(c, fiber.StatusInternalServerError, "Failed to process login")
+  }
 
-	setAuthCookie(c, r.Token, 24*time.Hour)
-	// Retornando apenas o token, conforme solicitado
-	return c.Status(fiber.StatusOK).JSON(SuccessResponse{
-		Data: map[string]string{"token": r.Token},
-	})
+  setAuthCookie(c, r.Token, 24*time.Hour)
+  return c.Status(fiber.StatusOK).JSON(SuccessResponse{
+    Data: map[string]string{"token": r.Token},
+  })
 }
 
 // Me godoc
@@ -121,22 +120,22 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 // @Router /auth/me [get]
 // @Security ApiKeyAuth
 func (h *AuthHandler) Me(c fiber.Ctx) error {
-	res := response.HTTPResponse{Ctx: c}
+  res := response.HTTPResponse{Ctx: c}
 
-	userID := c.Locals("user_id").(string)
-	if userID == "" {
-		return res.Message(fiber.StatusUnauthorized, "Unauthorized")
-	}
+  userID := c.Locals("user_id").(string)
+  if userID == "" {
+    return res.Message(fiber.StatusUnauthorized, "Unauthorized")
+  }
 
-	user, err := h.authService.GetMe(c.Context(), userID)
-	if err != nil {
-		if errors.Is(err, repository.ErrUserNotFound) {
-			return res.Message(fiber.StatusNotFound, "User not found")
-		}
-		return res.Message(fiber.StatusInternalServerError, "Failed to retrieve user information")
-	}
+  user, err := h.authService.GetMe(c.Context(), userID)
+  if err != nil {
+    if errors.Is(err, repository.ErrUserNotFound) {
+      return res.Message(fiber.StatusNotFound, "User not found")
+    }
+    return res.Message(fiber.StatusInternalServerError, "Failed to retrieve user information")
+  }
 
-	return res.Ok(SuccessResponse{Data: user})
+  return res.Ok(SuccessResponse{Data: user})
 }
 
 // Logout godoc
@@ -149,8 +148,8 @@ func (h *AuthHandler) Me(c fiber.Ctx) error {
 // @Security ApiKeyAuth
 // @Router /auth/logout [post]
 func (h *AuthHandler) Logout(c fiber.Ctx) error {
-	setAuthCookie(c, "", -time.Hour) // Expire the cookie
-	return c.Status(fiber.StatusOK).JSON(SuccessResponse{
-		Data: "Logged out successfully",
-	})
+  setAuthCookie(c, "", -time.Hour) // Expire the cookie
+  return c.Status(fiber.StatusOK).JSON(SuccessResponse{
+    Data: "Logged out successfully",
+  })
 }
