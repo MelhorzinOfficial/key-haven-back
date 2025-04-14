@@ -103,7 +103,40 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 	}
 
 	setAuthCookie(c, r.Token, 24*time.Hour)
-	return c.Status(fiber.StatusOK).JSON(SuccessResponse{Data: r})
+	// Retornando apenas o token, conforme solicitado
+	return c.Status(fiber.StatusOK).JSON(SuccessResponse{
+		Data: map[string]string{"token": r.Token},
+	})
+}
+
+// Me godoc
+// @Summary Get authenticated user information
+// @Description Returns the current authenticated user's information
+// @Tags Auth
+// @Produce json
+// @Success 200 {object} SuccessResponse
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 404 {object} ErrorResponse "User not found"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /auth/me [get]
+// @Security ApiKeyAuth
+func (h *AuthHandler) Me(c fiber.Ctx) error {
+	res := response.HTTPResponse{Ctx: c}
+
+	userID := c.Locals("user_id").(string)
+	if userID == "" {
+		return res.Message(fiber.StatusUnauthorized, "Unauthorized")
+	}
+
+	user, err := h.authService.GetMe(c.Context(), userID)
+	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			return res.Message(fiber.StatusNotFound, "User not found")
+		}
+		return res.Message(fiber.StatusInternalServerError, "Failed to retrieve user information")
+	}
+
+	return res.Ok(SuccessResponse{Data: user})
 }
 
 // Logout godoc

@@ -28,6 +28,13 @@ type LoginResponse struct {
 	User  user.User `json:"user"`
 }
 
+type UserResponse struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Email  string `json:"email"`
+	Avatar string `json:"avatar"`
+}
+
 func NewUser(req *CreateUserRequest) *user.User {
 	now := time.Now()
 	return &user.User{
