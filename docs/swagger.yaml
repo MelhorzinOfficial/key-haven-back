@@ -223,6 +223,33 @@ paths:
       summary: User logout
       tags:
       - Auth
+  /auth/me:
+    get:
+      description: Returns the current authenticated user's information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.SuccessResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get authenticated user information
+      tags:
+      - Auth
   /auth/register:
     post:
       consumes:
